@@ -7,16 +7,16 @@ plan skip_all => 'WWW::Shorten is not installed' unless $loaded;
 SKIP: {
     eval q{no WWW::Shorten; no WWW::Shorten::Metamark};
 
-    plan tests => 8;
-
     no warnings 'once';
+
+    plan tests => 8;
 
     $loaded = eval q{use WWW::Shorten 'TinyURL::RU'; 1};
     is $loaded, 1, 'plugin loaded ok';
     ok defined *main::makeashorterlink{CODE}, 'makeashorterlink exported ok';
     ok defined *main::makealongerlink{CODE},  'makealongerlink export ok';
 
-    no WWW::Shorten; no WWW::Shorten::TinyURL::RU;
+    eval q{no WWW::Shorten; no WWW::Shorten::TinyURL::RU};
 
     $loaded = eval q{use WWW::Shorten 'TinyURL', ':short'; 1};
     is $loaded, 1, 'plugin with another names set loaded ok';

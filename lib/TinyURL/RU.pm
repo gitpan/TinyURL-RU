@@ -10,7 +10,7 @@ use XML::LibXML;
 use LWP::UserAgent;
 
 our @EXPORT_OK = qw(shorten lengthen);
-our $VERSION   = '0.01';
+our $VERSION   = '0.02';
 
 use constant URL => 'http://whoyougle.ru/net/api/tinyurl/?long=%s&prefix=%s&suffix=%s&option=%d';
 
