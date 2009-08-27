@@ -10,7 +10,7 @@ use XML::LibXML;
 use LWP::UserAgent;
 
 our @EXPORT_OK = qw(shorten lengthen);
-our $VERSION   = '0.02';
+our $VERSION   = '0.03';
 
 use constant URL => 'http://whoyougle.ru/net/api/tinyurl/?long=%s&prefix=%s&suffix=%s&option=%d';
 
@@ -38,7 +38,11 @@ sub shorten {
 sub lengthen {
     my $short = shift;
 
-    $short = "http://byst.ro/$short" unless $short =~ m{^http://};
+    unless($short =~ m{^http://}) {
+        $short = ($short =~ m{(?:tinyurl\.ru|byst\.ro)/})
+            ? "http://$short"
+            : "http://byst.ro/$short"
+    }
 
     my $ua = LWP::UserAgent->new(timeout => 3);
     $ua->parse_head(0);
