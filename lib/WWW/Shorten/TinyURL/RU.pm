@@ -11,17 +11,20 @@ our $VERSION = $TinyURL::RU::VERSION;
 our @EXPORT = qw(makeashorterlink makealongerlink);
 
 sub makeashorterlink {
-    my $url    = shift or croak 'No URL passed to makeashorterlink';
-    my $prefix = shift;
-    my $suffix = shift;
+    my $url = shift || croak 'No URL passed to makeashorterlink';
 
-    return shorten($url, $prefix, $suffix)
+    return shorten($url, @_)
 }
 
 sub makealongerlink {
-    my $tinyurl_url = shift or croak 'No TinyURL.RU key / URL passed to makealongerlink';
+    my $tinyurl_url = shift || croak 'No TinyURL.RU key / URL passed to makealongerlink';
 
-    $tinyurl_url = "http://tinyurl.ru/$tinyurl_url" unless $tinyurl_url =~ m{^http://};
+    unless($tinyurl_url =~ m{^http://}) {
+        $tinyurl_url = ($tinyurl_url =~ m{(?:tinyurl\.ru|byst\.ro)/})
+            ? "http://$tinyurl_url"
+            : "http://byst.ro/$tinyurl_url"
+    }
+
 
     return lengthen($tinyurl_url)
 }

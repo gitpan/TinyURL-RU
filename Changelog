@@ -1,0 +1,11 @@
+0.04 - Fri Sep 25 2009
+    - added incremental links support
+
+0.03 - Thu Aug 27 2009
+    - added lengthen() function
+
+0.02 - Mon Aug 24 2009
+    - fixed bug in WWW::Shorten compatibility tests
+
+0.01 - Sun Aug 23 2009
+    - first release

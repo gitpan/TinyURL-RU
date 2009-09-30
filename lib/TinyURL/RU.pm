@@ -10,22 +10,26 @@ use XML::LibXML;
 use LWP::UserAgent;
 
 our @EXPORT_OK = qw(shorten lengthen);
-our $VERSION   = '0.03';
+our $VERSION   = '0.04';
 
-use constant URL => 'http://whoyougle.ru/net/api/tinyurl/?long=%s&prefix=%s&suffix=%s&option=%d';
+use constant URL => 'http://whoyougle.ru/net/api/tinyurl/?long=%s&prefix=%s&suffix=%s&option=%d&increment=%d';
 
 sub shorten {
     my $long   = shift || return;
     my $prefix = shift || '';
     my $suffix = shift || '';
+    my %args   = @_;
 
     my $option = 1;
     if($prefix and not $suffix)    { $option = 2 }
     elsif(not $prefix and $suffix) { $option = 3 }
     elsif($prefix and $suffix)     { $option = 4 }
 
+    $args{increment} = 0 unless defined $args{increment};
+    return if $args{increment} and not $suffix;
+
     my $ua = LWP::UserAgent->new(timeout => 3);
-    my $resp = $ua->get(sprintf URL, uri_escape_utf8($long), $prefix, $suffix, $option);
+    my $resp = $ua->get(sprintf URL, uri_escape_utf8($long), $prefix, $suffix, $option, $args{increment});
     $resp->is_success or return;
 
     my $xml = eval { XML::LibXML->new->parse_string($resp->content) } or return;
@@ -78,23 +82,43 @@ This module provides you a very simple interface to URL shortening site http://b
 
 =head1 FUNCTIONS
 
-=head2 $short = shorten($long [, $prefix, $suffix])
+=head2 $short = shorten($long [, $prefix, $suffix, %options])
 
 Takes long URL as first argument and returns its tiny version (or undef on error).
 
-Optionaly you can pass $prefix and/or $suffix for tiny URL.
+Optionaly you can pass $prefix and/or $suffix for tiny URL and some other options.
 
 C<$prefix> will be used as subdomain in shortened URL.
 
 C<$suffix> will be used as path in shortened URL.
 
-Example:
-
-    $short = shorten($long, 'hello');          # $short eq 'http://hello.byst.ro/'
-    $short = shorten($long, undef, 'hello');   # $short eq 'http://byst.ro/hello'
-    $short = shorten($long, 'hello', 'world'); # $short eq 'http://hello.byst.ro/world'
-
 Note: passing C<$prefix> and/or C<$suffix> may cause shortening fail if C<$prefix> or C<$suffix> is already taken by someone.
+
+C<%options> are:
+
+=over 8
+
+=item increment
+
+Lets you to re-use same (almost) C<$suffix> for different URLs.
+
+Implemented by automatical appending of an incremental number (starts with 1) on repeated requests with the same C<$suffix>.
+
+Note: this options works only with C<$suffix> passed.
+
+=back
+
+Simple example:
+
+    $short = shorten($long1, 'hello');          # $short eq 'http://hello.byst.ro/'
+    $short = shorten($long2, 'hello', 'world'); # $short eq 'http://hello.byst.ro/world'
+
+Incremental example:
+
+    $short = shorten($long1, undef, 'hello');                # $short eq 'http://byst.ro/hello'
+    $short = shorten($long1, undef, 'hello');                # short is undefined because 'hello' suffix already exists for $long1
+    $short = shorten($long2, undef, 'hello', increment => 1) # $short eq 'http://byst.ro/hello1'
+    $short = shorten($long3, undef, 'hello', increment => 1) # $short eq 'http://byst.ro/hello2'
 
 =head2 $long = lengthen($short)
 
