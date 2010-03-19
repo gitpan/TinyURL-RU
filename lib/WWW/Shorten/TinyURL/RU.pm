@@ -7,13 +7,13 @@ use base qw(WWW::Shorten::generic Exporter);
 use Carp qw(croak);
 use TinyURL::RU qw(shorten lengthen);
 
-our $VERSION = $TinyURL::RU::VERSION;
+our $VERSION = '0.05';
 our @EXPORT = qw(makeashorterlink makealongerlink);
 
 sub makeashorterlink {
     my $url = shift || croak 'No URL passed to makeashorterlink';
 
-    return shorten($url, @_)
+    return shorten($url, @_);
 }
 
 sub makealongerlink {
@@ -26,7 +26,7 @@ sub makealongerlink {
     }
 
 
-    return lengthen($tinyurl_url)
+    return lengthen($tinyurl_url);
 }
 
 __END__

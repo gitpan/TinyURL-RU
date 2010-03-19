@@ -1,6 +1,5 @@
 package TinyURL::RU;
 
-use utf8;
 use strict;
 use warnings;
 use base 'Exporter';
@@ -8,11 +7,18 @@ use base 'Exporter';
 use URI::Escape;
 use XML::LibXML;
 use LWP::UserAgent;
+use Encode qw(decode);
 
 our @EXPORT_OK = qw(shorten lengthen);
-our $VERSION   = '0.04';
+our $VERSION   = '0.05';
 
 use constant URL => 'http://whoyougle.ru/net/api/tinyurl/?long=%s&prefix=%s&suffix=%s&option=%d&increment=%d';
+
+my $ua = LWP::UserAgent->new(
+    timeout      => 3,
+    parse_head   => 0,
+    max_redirect => 0,
+);
 
 sub shorten {
     my $long   = shift || return;
@@ -35,8 +41,9 @@ sub shorten {
     my $xml = eval { XML::LibXML->new->parse_string($resp->content) } or return;
     return if $xml->findvalue('/result/@error');
 
-    my($short) = $xml->findnodes('/result/tiny')->shift;
-    return defined $short ? $short->textContent : undef
+    my $short = $xml->findvalue('/result/tiny');
+
+    $short;
 }
 
 sub lengthen {
@@ -48,18 +55,13 @@ sub lengthen {
             : "http://byst.ro/$short"
     }
 
-    my $ua = LWP::UserAgent->new(timeout => 3);
-    $ua->parse_head(0);
-    $ua->max_redirect(0);
-    my $resp = $ua->get($short);
-    $resp->{_rc} == 302 or return;
+    my $resp = $ua->head($short);
+    $resp->is_redirect or return;
 
-    my $loc = $resp->header('Location');
-    utf8::decode($loc);
-    $loc
+    decode('utf-8', $resp->header('Location'));
 }
 
-1
+1;
 
 __END__
 
@@ -80,6 +82,10 @@ TinyURL::RU - shorten URLs with byst.ro (aka tinyurl.ru)
 
 This module provides you a very simple interface to URL shortening site http://byst.ro (aka http://tinyurl.ru).
 
+IMPORTANT NOTE:
+
+byst.ro/tinyurl.ru checks all incoming URLs for blacklisting.
+
 =head1 FUNCTIONS
 
 =head2 $short = shorten($long [, $prefix, $suffix, %options])
@@ -92,7 +98,13 @@ C<$prefix> will be used as subdomain in shortened URL.
 
 C<$suffix> will be used as path in shortened URL.
 
-Note: passing C<$prefix> and/or C<$suffix> may cause shortening fail if C<$prefix> or C<$suffix> is already taken by someone.
+Note: passing C<$prefix> and/or C<$suffix> may cause shortening fail if C<$prefix> or C<$suffix> is already taken by someone for different URL address.
+
+There are some prefixes and suffixes which are reserved by byst.ro for its own purposes:
+
+prefixes: www, bfm
+
+suffixes: personal
 
 C<%options> are:
 
@@ -102,7 +114,7 @@ C<%options> are:
 
 Lets you to re-use same (almost) C<$suffix> for different URLs.
 
-Implemented by automatical appending of an incremental number (starts with 1) on repeated requests with the same C<$suffix>.
+Implemented by automatical appending of an incremental number (starts with 1) on repeated requests with the same C<$suffix> and different URLs.
 
 Note: this options works only with C<$suffix> passed.
 
@@ -112,17 +124,20 @@ Simple example:
 
     $short = shorten($long1, 'hello');          # $short eq 'http://hello.byst.ro/'
     $short = shorten($long2, 'hello', 'world'); # $short eq 'http://hello.byst.ro/world'
+    $short = shorten($long2, 'hello', 'world'); # $short eq 'http://hello.byst.ro/world' (again)
 
 Incremental example:
 
     $short = shorten($long1, undef, 'hello');                # $short eq 'http://byst.ro/hello'
-    $short = shorten($long1, undef, 'hello');                # short is undefined because 'hello' suffix already exists for $long1
+    $short = shorten($long2, undef, 'hello');                # short is undefined because 'hello' suffix already exists for $long1
     $short = shorten($long2, undef, 'hello', increment => 1) # $short eq 'http://byst.ro/hello1'
     $short = shorten($long3, undef, 'hello', increment => 1) # $short eq 'http://byst.ro/hello2'
 
 =head2 $long = lengthen($short)
 
 Takes shortened URL (or its path part) as argument and returns its original version (or undef on error).
+
+Returned value is a valid UTF-8 string with URL within it.
 
 =head1 AUTHOR
 
