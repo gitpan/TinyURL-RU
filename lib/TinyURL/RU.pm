@@ -10,7 +10,7 @@ use LWP::UserAgent;
 use Encode qw(decode);
 
 our @EXPORT_OK = qw(shorten lengthen);
-our $VERSION   = '0.05';
+our $VERSION   = '0.06';
 
 use constant URL => 'http://whoyougle.ru/net/api/tinyurl/?long=%s&prefix=%s&suffix=%s&option=%d&increment=%d';
 
@@ -41,7 +41,7 @@ sub shorten {
     my $xml = eval { XML::LibXML->new->parse_string($resp->content) } or return;
     return if $xml->findvalue('/result/@error');
 
-    my $short = $xml->findvalue('/result/tiny');
+    my $short = $xml->findvalue('/result/tiny') || undef;
 
     $short;
 }
