@@ -1,7 +1,7 @@
 use Test::More qw(no_plan);
 
 use utf8;
-use TinyURL::RU qw(shorten lengthen);
+use TinyURL::RU qw(shorten lengthen shorten_with_qrcode);
 
 my @links = (
     [ 'http://whoyougle.ru/time/converter/gregorian/saka/24.8.1990', undef,    undef,    ],
@@ -42,6 +42,12 @@ for(@links) {
     $long = lengthen($tiny);
     ok defined $long, 'lengthen ok (w/ tinyurl host)';
     is $long, $url, 'lengthen url is equal to orginal (w/ tinyurl host)';
+
+    my $qrcode = shorten_with_qrcode($url, $prefix, $suffix);
+    ok defined $tiny, 'shorten_with_qrcode ok (scalar context)';
+    ($qrcode, $tiny) = shorten_with_qrcode($url, $prefix, $suffix);
+    ok defined $qrcode, 'shorten_with_qrcode ok (list context 1)';
+    ok defined $tiny,   'shorten_with_qrcode ok (list context 2)';
 }
 
 my $start = 0;

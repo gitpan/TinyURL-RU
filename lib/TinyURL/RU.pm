@@ -9,10 +9,13 @@ use XML::LibXML;
 use LWP::UserAgent;
 use Encode qw(decode);
 
-our @EXPORT_OK = qw(shorten lengthen);
-our $VERSION   = '0.06';
+our @EXPORT_OK = qw(shorten lengthen shorten_with_qrcode);
+our $VERSION   = '0.07';
 
-use constant URL => 'http://whoyougle.ru/net/api/tinyurl/?long=%s&prefix=%s&suffix=%s&option=%d&increment=%d';
+use constant URL    => 'http://whoyougle.ru/net/api/tinyurl/?long=%s&prefix=%s&suffix=%s&option=%d&increment=%d';
+use constant QRCODE => 'http://gd.whoyougle.ru/?type=QRcode&size=%i&value=%s';
+
+our $QRCODE_SIZE = 100;
 
 my $ua = LWP::UserAgent->new(
     timeout      => 3,
@@ -34,7 +37,10 @@ sub shorten {
     $args{increment} = 0 unless defined $args{increment};
     return if $args{increment} and not $suffix;
 
-    my $ua = LWP::UserAgent->new(timeout => 3);
+    my $ua = LWP::UserAgent->new(
+        agent   => __PACKAGE__ .  " $VERSION, ",
+        timeout => 3,
+    );
     my $resp = $ua->get(sprintf URL, uri_escape_utf8($long), $prefix, $suffix, $option, $args{increment});
     $resp->is_success or return;
 
@@ -59,6 +65,19 @@ sub lengthen {
     $resp->is_redirect or return;
 
     decode('utf-8', $resp->header('Location'));
+}
+
+sub shorten_with_qrcode {
+    my $short = my $value = shorten(@_) || return;
+    $value =~ s{^http://}{};
+    my $qrcode = sprintf QRCODE, $QRCODE_SIZE, $value;
+
+    if(wantarray) {
+        return ($qrcode, $short);
+    }
+    else {
+        return $qrcode;
+    }
 }
 
 1;
@@ -139,6 +158,36 @@ Takes shortened URL (or its path part) as argument and returns its original vers
 
 Returned value is a valid UTF-8 string with URL within it.
 
+=head2 $qrcode = shorten_with_qrcode($long [, $prefix, $suffix, %options])
+
+=head2 ($qrcode, $short) = shorten_with_qrcode($long [, $prefix, $suffix, %options])
+
+Does almost the same as shorten() and takes the same arguments.
+
+In scalar context return value is a link to an image that has shortened URL encoded in it.
+In list context returned is a list of the link to an image and shortened URL.
+
+The image is a QR code which is readable by plenty of devices, e.g. mobile phones with camera.
+
+Usage example:
+
+    $w = $h = $TinyURL::RU::QRCODE_SIZE;
+    $qrcode = shorten_with_qrcode($long4);
+
+Later, in your templates:
+
+    <img src="<% $qrcode %>" width="<% $w %>" height="<% $h %>"/>
+
+=head1 VARIABLES
+
+=head2 $QRCODE_SIZE
+
+Sets the size of the QR code image. The image will be a square of $QRCODE_SIZE px.
+
+The size must be between 100 and 1000 or it will be ignored.
+
+Default value is 300.
+
 =head1 AUTHOR
 
 Алексей Суриков E<lt>ksuri@cpan.orgE<gt>
@@ -156,6 +205,8 @@ L<WWW::Shorten::TinyURL::RU>
 L<http://byst.ro/>
 
 L<http://tinyurl.ru/>
+
+L<http://en.wikipedia.org/wiki/QR_Code>
 
 =head1 LICENSE
 
